@@ -1,0 +1,72 @@
+[
+  {
+    "title": "Name",
+    "id": "fname",
+    "inputType": "text",
+    "mandatory": true,
+    "enable": true
+  },
+  {
+    "title": "Number",
+    "id": "phoneNum",
+    "inputType": "number",
+    "charLength": 5,
+    "mandatory": false,
+    "enable": true,
+  },
+  {
+    "title": "Gender",
+    "id": "gender",
+    "inputType": "select",
+    "mandatory": false,
+    "enable": true,
+    "options": [
+      {
+        "text": "male",
+        "value": "male"
+      },
+      {
+        "text": "female",
+        "value": "female"
+      },
+      {
+        "text": "other",
+        "value": "other"
+      }
+    ],
+  },
+  {
+    "title": "address",
+    "id": "address_1",
+    "inputType": "textarea",
+    "mandatory": false,
+    "enable": true
+  },
+  {
+    "title": "Address 2",
+    "id": "address_2",
+    "inputType": "textarea",
+    "mandatory": true,
+    "enable": true
+  },
+  {
+    "title": "Check box",
+    "id": "checkBox",
+    "inputType": "checkbox",
+    "mandatory": false,
+    "enable": true,
+  }
+]
+this is the sample JSON you can share this to others 
+ 
+use the 5 different input types and create a form using JSON
+
+
+hey this is thge sample JSON data i want to create the Registration Form with Jquery 
+in that the switch case should maintain to perform the action like if the input types comes then return the json 
+This object is used to create the specific UI for that particular type of the form
+do the same for checkbox,text,select 
+and the this form should be created using SMART FORM using this json data 
+and the mandatory feilds are should be implemented first name,lat name,email,phone no,gender,address
+and perform some validation and use all three events like click,mouse,chnage events
+give the code to html+tailwind css and jqery code
