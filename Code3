@@ -1,0 +1,180 @@
+$(document).ready(function () {
+  // JSON Data
+  const formData = [
+    { "title": "First Name", "id": "fname", "inputType": "text", "mandatory": true, "enable": true },
+    { "title": "Last Name", "id": "lname", "inputType": "text", "mandatory": true, "enable": true },
+    { "title": "Email", "id": "email", "inputType": "text", "mandatory": true, "enable": true },
+    { "title": "Phone Number", "id": "phoneNum", "inputType": "number", "mandatory": true, "enable": true },
+    { "title": "Password", "id": "password", "inputType": "password", "mandatory": true, "enable": true },
+    { "title": "Confirm Password", "id": "confirmPassword", "inputType": "password", "mandatory": true, "enable": true },
+    {
+      "title": "Gender", "id": "gender", "inputType": "select", "mandatory": true, "enable": true,
+      "options": [
+        { "text": "Male", "value": "male" },
+        { "text": "Female", "value": "female" },
+        { "text": "Other", "value": "other" }
+      ]
+    },
+    { "title": "Address", "id": "address", "inputType": "textarea", "mandatory": true, "enable": true },
+    { "title": "Accept Terms", "id": "terms", "inputType": "checkbox", "mandatory": true, "enable": true }
+  ];
+
+  // Build Form
+  function buildForm(data) {
+    let formHtml = `<div class="max-w-md mx-auto bg-blue-900 p-6 rounded-xl shadow-lg text-white">`;
+
+    data.forEach(field => {
+      let fieldHtml = "";
+
+      switch (field.inputType) {
+        case "text":
+        case "number":
+        case "password":
+          fieldHtml = `
+            <div class="mb-4">
+              <label class="block font-semibold mb-1 text-orange-400">${field.title}
+                ${field.mandatory ? '<span class="text-red-400">*</span>' : ''}
+              </label>
+              <input type="${field.inputType}" id="${field.id}" 
+                     class="w-full p-2 border rounded-lg text-black"
+                     ${field.enable ? '' : 'disabled'}
+                     ${field.mandatory ? 'required' : ''}>
+              <p id="${field.id}-error" class="text-red-500 text-sm mt-1 hidden"></p>
+            </div>`;
+          break;
+
+        case "select":
+          fieldHtml = `
+            <div class="mb-4">
+              <label class="block font-semibold mb-1 text-orange-400">${field.title}
+                ${field.mandatory ? '<span class="text-red-400">*</span>' : ''}
+              </label>
+              <select id="${field.id}" 
+                      class="w-full p-2 border rounded-lg text-black"
+                      ${field.enable ? '' : 'disabled'}
+                      ${field.mandatory ? 'required' : ''}>
+                <option value="">Select</option>
+                ${field.options.map(opt => `<option value="${opt.value}">${opt.text}</option>`).join("")}
+              </select>
+              <p id="${field.id}-error" class="text-red-500 text-sm mt-1 hidden"></p>
+            </div>`;
+          break;
+
+        case "textarea":
+          fieldHtml = `
+            <div class="mb-4">
+              <label class="block font-semibold mb-1 text-orange-400">${field.title}
+                ${field.mandatory ? '<span class="text-red-400">*</span>' : ''}
+              </label>
+              <textarea id="${field.id}" rows="3"
+                        class="w-full p-2 border rounded-lg text-black"
+                        ${field.enable ? '' : 'disabled'}
+                        ${field.mandatory ? 'required' : ''}></textarea>
+              <p id="${field.id}-error" class="text-red-500 text-sm mt-1 hidden"></p>
+            </div>`;
+          break;
+
+        case "checkbox":
+          fieldHtml = `
+            <div class="mb-4 flex items-center space-x-2">
+              <input type="checkbox" id="${field.id}"
+                     class="w-4 h-4"
+                     ${field.enable ? '' : 'disabled'}
+                     ${field.mandatory ? 'required' : ''}>
+              <label for="${field.id}" class="font-semibold text-orange-400">${field.title}
+                ${field.mandatory ? '<span class="text-red-400">*</span>' : ''}
+              </label>
+              <p id="${field.id}-error" class="text-red-500 text-sm mt-1 hidden"></p>
+            </div>`;
+          break;
+      }
+
+      formHtml += fieldHtml;
+    });
+
+    formHtml += `<button id="submitBtn" class="w-full mt-4 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600">Register</button>`;
+    formHtml += `</div>`;
+    $("#smartForm").html(formHtml);
+  }
+
+  // Field-wise Validation
+  function validateField(id) {
+    let value = $(`#${id}`).val();
+    let valid = true;
+
+    $(`#${id}`).removeClass("border-red-500");
+    $(`#${id}-error`).text("").addClass("hidden");
+
+    let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let phoneRegex = /^[0-9]{10}$/;
+    let nameRegex = /^[A-Za-z]{2,}$/;
+
+    if ($(`#${id}`).attr("type") === "checkbox") {
+      if (!$(`#${id}`).is(":checked")) {
+        $(`#${id}-error`).text("This field is required").removeClass("hidden");
+        valid = false;
+      }
+      return valid;
+    }
+
+    if (!value) {
+      $(`#${id}`).addClass("border-red-500");
+      $(`#${id}-error`).text("This field is required").removeClass("hidden");
+      valid = false;
+    } else {
+      if ((id === "fname" || id === "lname") && !nameRegex.test(value)) {
+        $(`#${id}`).addClass("border-red-500");
+        $(`#${id}-error`).text("Must contain at least 2 letters").removeClass("hidden");
+        valid = false;
+      }
+      if (id === "email" && !emailRegex.test(value)) {
+        $(`#${id}`).addClass("border-red-500");
+        $(`#${id}-error`).text("Enter a valid email").removeClass("hidden");
+        valid = false;
+      }
+      if (id === "phoneNum" && !phoneRegex.test(value)) {
+        $(`#${id}`).addClass("border-red-500");
+        $(`#${id}-error`).text("Enter a valid 10-digit number").removeClass("hidden");
+        valid = false;
+      }
+      if (id === "password" && value.length < 6) {
+        $(`#${id}`).addClass("border-red-500");
+        $(`#${id}-error`).text("Password must be at least 6 characters").removeClass("hidden");
+        valid = false;
+      }
+      if (id === "confirmPassword" && value !== $("#password").val()) {
+        $(`#${id}`).addClass("border-red-500");
+        $(`#${id}-error`).text("Passwords do not match").removeClass("hidden");
+        valid = false;
+      }
+    }
+
+    return valid;
+  }
+
+  // Full Form Validation
+  function validateForm() {
+    let valid = true;
+    $("#smartForm [required]").each(function () {
+      if (!validateField($(this).attr("id"))) {
+        valid = false;
+      }
+    });
+    return valid;
+  }
+
+  // Events
+  buildForm(formData);
+
+  $(document).on("click", "#submitBtn", function (e) {
+    e.preventDefault();
+    if (validateForm()) {
+      alert("Form submitted successfully!");
+    }
+  });
+
+  // Validate on change
+  $(document).on("change", "input, select, textarea", function () {
+    validateField($(this).attr("id"));
+  });
+});
