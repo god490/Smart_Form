@@ -1,0 +1,115 @@
+const formData=[
+    {"title":"First Name","id":"fname","inputType":"text","mandatory":true,"regex":/^[A-Za-z]{3,}$/},
+    {"title":"Last Name","id":"lname","inputType":"text","mandatory":true,"regex":/^[A-Za-z]{1,}$/},
+    {"title":"Email","id":"email","inputType":"text","mandatory":true,"regex":/^[^\s@]+@[^\s@]+\.[^\s@]+$/},
+    {"title":"Phone Number","id":"phoneNum","inputType":"text","mandatory":true,"regex":/^[0-9]{10}$/},
+    {"title": "Gender", "id": "gender", "inputType": "select", "mandatory": true,
+      "options":[{"text": "Male", "value": "male"},{"text": "Female", "value": "female"},{"text": "Other", "value": "other"}]},
+    { "title": "Password", "id": "password", "inputType": "password", "mandatory": true, "enable": true,"regex":/^(?=.*[A-Z])(?=.*[!@#$%^&*]).{3,}$/},
+    { "title": "Confirm Password", "id": "confirmPassword", "inputType": "password", "mandatory": true, "enable": true },
+    ];
+  function create(field){
+    let inputEl = '';
+    switch (field.inputType){
+      case "text":
+      case "number":
+      case "password":
+        inputEl = `<input type="${field.inputType}" id="${field.id}" class="w-full border p-2 rounded">`;
+        break;
+      case "textarea":
+        inputEl = `<textarea id="${field.id}" class="w-full border p-2 rounded"></textarea>`;
+        break;
+      case "select":
+        inputEl = `<select id="${field.id}" class="w-full border p-2 rounded">
+          <option value="">Select</option>
+          ${field.options.map(opt => `<option value="${opt.value}">${opt.text}</option>`).join('')}
+        </select>`;
+        return `<div><label>${inputEl}</label><p id="${field.id}Error" class="text-red-500 text-sm hidden"></p></div>`;
+    }
+    return `<div><label class="block font-medium mb-1">${field.title}</label>${inputEl}<p id="${field.id}Error" class="text-red-500 text-sm hidden"></p></div>`;
+  }
+  function Form(){
+    const form = $("#RForm");
+    formData.forEach(field => form.append(create(field)));
+  }
+  function validate(field, value){
+    let errorMsg = "";
+    if(field.mandatory && (!value||(Array.isArray(value) && value.length === 0))){
+      errorMsg = `${field.title} is required.`;
+    }
+    else if(field.regex && value && !field.regex.test(value)){
+      errorMsg = `Invalid ${field.title}.`;
+    }
+    else if(field.id=="confirmPassword")
+    {
+        let pswrd=$("#password").val();
+        if(value!==pswrd)
+        {
+           errorMsg="Password do not match.";
+        }
+    }
+    if(errorMsg){
+      $(`#${field.id}Error`).text(errorMsg).removeClass("hidden");
+      return false;
+    } 
+    else{
+      $(`#${field.id}Error`).text("").addClass("hidden");
+      return true;
+    }
+  }
+  function getFData(){
+    const data={};
+    let valid = true;
+    formData.forEach(field =>{
+      let value;
+        value = $(`#${field.id}`).val();
+      if (!validate(field, value)) valid=false;
+      if(field.id!=="confirmPassword"){
+        data[field.id] = value;
+      }
+    });
+
+    if (!valid) throw new Error("Validation failed");
+    return data;
+  }
+  function getData(){
+    return JSON.parse(localStorage.getItem("registration"))||[];
+  }
+  function setData(allData){
+      localStorage.setItem("registration", JSON.stringify(allData));
+  }
+  function saveData(data){
+    let allData = getData();
+    allData.push(data);
+    setData(allData);
+  }
+  function Table(){
+    let allData = getData();
+    if($.fn.DataTable.isDataTable('#FTable')){
+      $('#FbackTable').DataTable().clear().rows.add(allData).draw();
+    } 
+    else
+    {
+      $('#FTable').DataTable({
+        data: allData,
+        columns: formData.filter(f=>f.id!=="confirmPassword" && f.id!=="password").map(f =>({ title: f.title, data: f.id }))
+      });
+    }
+  }
+  $(document).ready(function(){
+    Form();
+    Table();
+    $("#submitBtn").on("click", function(e){
+      e.preventDefault();
+      try {
+        const data = getFData();
+        saveData(data);
+        Table();
+        alert("Registered successfully!");
+        $("#RForm").trigger("reset");
+      }catch(err){
+        console.error(err);
+        alert("Please fix validation errors before submitting.");
+      }
+    });
+  });
