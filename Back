@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AJAX with Fetch</title>
+</head>
+<body>
+  <h2>Check Console for Results</h2>
+
+  <script>
+    const apiUrl = "https://jsonplaceholder.typicode.com/posts";
+
+    // GET
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then(data => console.log("GET Response:", data.slice(0, 3)));
+
+    // POST
+    fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "foo", body: "bar", userId: 1 })
+    })
+    .then(res => res.json())
+    .then(data => console.log("POST Response:", data));
+
+    // PUT
+    fetch(apiUrl + "/1", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: 1, title: "updated", body: "changed", userId: 1 })
+    })
+    .then(res => res.json())
+    .then(data => console.log("PUT Response:", data));
+
+    // DELETE
+    fetch(apiUrl + "/1", { method: "DELETE" })
+      .then(() => console.log("DELETE Response: Post deleted successfully"));
+  </script>
+</body>
+</html>
