@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AJAX Get Example</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    table {
+      width: 80%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #f2f2f2;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>AJAX Table with Dummy API</h2>
+
+  <!-- Buttons -->
+  <button id="getAll">Get All Users</button>
+  <button id="getFirst5">Get First 5 Users</button>
+  <button id="getById">Get User by ID</button>
+  <button id="getByName">Get User by Name</button>
+
+  <!-- Input fields for ID and Name -->
+  <div style="margin:10px 0;">
+    <input type="number" id="userIdInput" placeholder="Enter User ID">
+    <input type="text" id="userNameInput" placeholder="Enter User Name">
+  </div>
+
+  <!-- Table -->
+  <table id="userTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Username</th>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
+
+
+$(document).ready(function () {
+  const apiUrl = "https://jsonplaceholder.typicode.com/users";
+
+  // Function to render table
+  function renderTable(data) {
+    let rows = "";
+    data.forEach(user => {
+      rows += `
+        <tr>
+          <td>${user.id}</td>
+          <td>${user.name}</td>
+          <td>${user.username}</td>
+          <td>${user.email}</td>
+        </tr>
+      `;
+    });
+    $("#userTable tbody").html(rows);
+  }
+
+  // GET All Users
+  $("#getAll").click(function () {
+    $.ajax({
+      url: apiUrl,
+      type: "GET",
+      success: function (data) {
+        renderTable(data);
+      }
+    });
+  });
+
+  // GET First 5 Users
+  $("#getFirst5").click(function () {
+    $.ajax({
+      url: apiUrl,
+      type: "GET",
+      success: function (data) {
+        renderTable(data.slice(0, 5));
+      }
+    });
+  });
+
+  // GET by ID
+  $("#getById").click(function () {
+    const id = $("#userIdInput").val();
+    if (!id) {
+      alert("Enter a User ID first!");
+      return;
+    }
+    $.ajax({
+      url: apiUrl + "/" + id,
+      type: "GET",
+      success: function (data) {
+        renderTable([data]); // wrap in array for table
+      },
+      error: function () {
+        alert("No user found with this ID");
+      }
+    });
+  });
+
+  // GET by Name (search locally)
+  $("#getByName").click(function () {
+    const name = $("#userNameInput").val().toLowerCase();
+    if (!name) {
+      alert("Enter a name first!");
+      return;
+    }
+    $.ajax({
+      url: apiUrl,
+      type: "GET",
+      success: function (data) {
+        const filtered = data.filter(user => user.name.toLowerCase().includes(name));
+        if (filtered.length > 0) {
+          renderTable(filtered);
+        } else {
+          alert("No user found with this name");
+        }
+      }
+    });
+  });
+});
+
