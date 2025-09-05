@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Feedback with Edit/Delete</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+<body>
+  <form id="feedbackForm"></form>
+  <table id="feedbackTable" class="display"></table>
+
+  <script>
+    // --- Form structure
+    const formData = [
+      { title: "First Name", id: "fname", inputType: "text", mandatory: true, regex: /^[A-Za-z]{2,}$/ },
+      { title: "Last Name", id: "lname", inputType: "text", mandatory: true, regex: /^[A-Za-z]{2,}$/ },
+      { title: "Email", id: "email", inputType: "text", mandatory: true, regex: /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/ },
+      { title: "Phone Number", id: "phoneNum", inputType: "text", mandatory: true, regex: /^[0-9]{10}$/ },
+      { title: "Password", id: "password", inputType: "password", mandatory: true,
+        regex: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[@$!%*?&]).{6,}$/ },
+      { title: "Confirm Password", id: "confirmPassword", inputType: "password", mandatory: true }
+    ];
+
+    // --- Storage helpers
+    function getAllData() {
+      return JSON.parse(localStorage.getItem("feedbacks")) || [];
+    }
+    function setAllData(allData) {
+      localStorage.setItem("feedbacks", JSON.stringify(allData));
+    }
+
+    // --- Validation
+    function validateField(field, value) {
+      let errorMsg = "";
+      if (field.mandatory && !value) {
+        errorMsg = `${field.title} is required.`;
+      } else if (field.id === "confirmPassword") {
+        if (value !== $("#password").val()) errorMsg = "Passwords do not match.";
+      } else if (field.regex && value && !field.regex.test(value)) {
+        errorMsg = `Invalid ${field.title}.`;
+      }
+      if (errorMsg) { alert(errorMsg); return false; }
+      return true;
+    }
+
+    // --- Form generator
+    function renderForm() {
+      const form = $("#feedbackForm");
+      form.empty();
+      formData.forEach(f => {
+        form.append(`<label>${f.title}: <input type="${f.inputType}" id="${f.id}" /></label><br/>`);
+      });
+      form.append('<button type="submit">Submit</button>');
+    }
+
+    // --- Table loader
+    function loadTable() {
+      let allData = getAllData();
+      allData = allData.map((row, i) => ({ ...row, actions: i })); // Add index for buttons
+
+      if ($.fn.DataTable.isDataTable("#feedbackTable")) {
+        $("#feedbackTable").DataTable().clear().rows.add(allData).draw();
+      } else {
+        $("#feedbackTable").DataTable({
+          data: allData,
+          columns: [
+            ...formData.map(f => ({
+              title: f.title,
+              data: f.id,
+              render: f.id.includes("password") ? () => "******" : undefined
+            })),
+            {
+              title: "Actions",
+              data: "actions",
+              render: (i) => `
+                <button class="editBtn" data-index="${i}">Edit</button>
+                <button class="deleteBtn" data-index="${i}">Delete</button>`
+            }
+          ]
+        });
+      }
+    }
+
+    // --- Submit handling (Add or Edit)
+    let editIndex = null;
+    $("#feedbackForm").on("submit", function (e) {
+      e.preventDefault();
+      const newData = {};
+      for (let f of formData) {
+        const val = $(`#${f.id}`).val();
+        if (!validateField(f, val)) return;
+        newData[f.id] = val;
+      }
+
+      let allData = getAllData();
+      if (editIndex !== null) {
+        // --- AJAX simulation for update
+        $.ajax({
+          url: "/edit",
+          type: "POST",
+          data: newData,
+          success: () => {
+            allData[editIndex] = newData;
+            setAllData(allData);
+            editIndex = null;
+            alert("Record updated!");
+            loadTable();
+            $("#feedbackForm")[0].reset();
+          }
+        });
+      } else {
+        // --- AJAX simulation for save
+        $.ajax({
+          url: "/save",
+          type: "POST",
+          data: newData,
+          success: () => {
+            allData.push(newData);
+            setAllData(allData);
+            alert("Record added!");
+            loadTable();
+            $("#feedbackForm")[0].reset();
+          }
+        });
+      }
+    });
+
+    // --- Delegated events for Edit/Delete
+    $(document).on("click", ".deleteBtn", function () {
+      const index = $(this).data("index");
+      if (confirm("Are you sure you want to delete this record?")) {
+        let allData = getAllData();
+        $.ajax({
+          url: "/delete",
+          type: "POST",
+          data: { index },
+          success: () => {
+            allData.splice(index, 1);
+            setAllData(allData);
+            loadTable();
+            alert("Record deleted!");
+          }
+        });
+      }
+    });
+
+    $(document).on("click", ".editBtn", function () {
+      editIndex = $(this).data("index");
+      const data = getAllData()[editIndex];
+      formData.forEach(f => $(`#${f.id}`).val(data[f.id]));
+    });
+
+    // --- Init
+    renderForm();
+    loadTable();
+  </script>
+</body>
+</html>
