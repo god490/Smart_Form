@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Registration with Edit/Delete</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6">
+  <form id="RForm" class="space-y-4"></form>
+  <button id="submitBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Submit</button>
+  <h2 class="text-xl font-bold mt-6">Registered Users</h2>
+  <table id="FTable" class="display w-full"></table>
+<script>
+const formData=[
+  {"title":"First Name","id":"fname","inputType":"text","mandatory":true,"regex":/^[A-Za-z]{3,}$/},
+  {"title":"Last Name","id":"lname","inputType":"text","mandatory":true,"regex":/^[A-Za-z]{1,}$/},
+  {"title":"Email","id":"email","inputType":"text","mandatory":true,"regex":/^[^\s@]+@[^\s@]+\.[^\s@]+$/},
+  {"title":"Phone Number","id":"phoneNum","inputType":"text","mandatory":true,"regex":/^[0-9]{10}$/},
+  {"title":"Gender","id":"gender","inputType":"select","mandatory":true,
+    "options":[{"text":"Male","value":"male"},{"text":"Female","value":"female"},{"text":"Other","value":"other"}]},
+  {"title":"Password","id":"password","inputType":"password","mandatory":true,"regex":/^(?=.*[A-Z])(?=.*[!@#$%^&*]).{3,}$/},
+  {"title":"Confirm Password","id":"confirmPassword","inputType":"password","mandatory":true}
+];
+let editIndex = null;
+function create(field){
+  let inputEl='';
+  switch(field.inputType){
+    case "text":
+    case "number":
+    case "password":
+      inputEl=`<input type="${field.inputType}" id="${field.id}" class="w-full border p-2 rounded">`;
+      break;
+    case "select":
+      inputEl=`<select id="${field.id}" class="w-full border p-2 rounded">
+        <option value="">Select</option>
+        ${field.options.map(opt=>`<option value="${opt.value}">${opt.text}</option>`).join('')}
+      </select>`;
+      break;
+  }
+  return `<div>
+    <label class="block font-medium mb-1">${field.title}</label>
+    ${inputEl}
+    <p id="${field.id}Error" class="text-red-500 text-sm hidden"></p>
+  </div>`;
+}
+function Form(){
+  const form=$("#RForm");
+  formData.forEach(field=>form.append(create(field)));
+}
+function validate(field, value){
+  let errorMsg = "";
+  if (field.id === "confirmPassword"){
+    let pswrd = $("#password").val();
+    if (editIndex === null){
+      if (!value){
+        errorMsg = "Confirm Password is required.";
+      }
+      else if(value !== pswrd){
+        errorMsg = "Passwords do not match.";
+      }
+    }
+    else{
+      if(value && value !== pswrd){
+        errorMsg = "Passwords do not match.";
+      }
+    }
+  }
+  else{
+    if(field.mandatory && (!value||(Array.isArray(value)&&value.length===0))){
+      errorMsg = `${field.title} is required.`;
+    }else if(field.regex && value && !field.regex.test(value)){
+      errorMsg = `Invalid ${field.title}.`;
+    }
+  }
+  if (errorMsg){
+    $(`#${field.id}Error`).text(errorMsg).removeClass("hidden");
+    return false;
+  }
+  else{
+    $(`#${field.id}Error`).text("").addClass("hidden");
+    return true;
+  }
+}
+function getFData(){
+  const data={};
+  let valid=true;
+  formData.forEach(field =>{
+    let value = $(`#${field.id}`).val();
+    if(!validate(field, value)) valid = false;
+    if(field.id !== "confirmPassword"){
+      data[field.id] = value;
+    }
+  });
+  if(!valid) throw new Error("Validation failed");
+  return data;
+}
+function getData(){
+  return JSON.parse(localStorage.getItem("registration"))||[];
+}
+function setData(allData){
+  localStorage.setItem("registration",JSON.stringify(allData));
+}
+function saveData(data){
+  let allData = getData();
+
+  if(editIndex !== null){
+    setTimeout(function(){
+      allData[editIndex] = data;
+      setData(allData);
+      editIndex = null;
+      Table();
+      alert("Record updated successfully!");
+      $("#RForm").trigger("reset"); 
+    }, 300);
+  } 
+  else{
+    setTimeout(function(){
+      allData.push(data);
+      setData(allData);
+      Table();
+      alert("Registered successfully!");
+      $("#RForm").trigger("reset");
+    }, 300);
+  }
+}
+function Table(){
+  let allData=getData();
+  if($.fn.DataTable.isDataTable('#FTable')){
+    $('#FTable').DataTable().clear().rows.add(allData).draw();
+  }
+  else{
+    $('#FTable').DataTable({
+      data:allData,
+      columns:[
+        ...formData.filter(f=>f.id!=="confirmPassword"&&f.id!=="password").map(f=>({title:f.title,data:f.id})),
+        { title:"Actions", data:null, render:function(data,type,row,meta){
+          return `
+            <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded" data-index="${meta.row}">Edit</button>
+            <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded" data-index="${meta.row}">Delete</button>
+          `;
+        }}
+      ]
+    });
+  }
+}
+$(document).on("click",".deleteBtn",function(){
+  let index = $(this).data("index");
+  if(confirm("Are you sure you want to delete this record?")){
+    setTimeout(function(){
+      let allData = getData();
+      allData.splice(index,1);
+      setData(allData);
+      Table();
+      alert("Record deleted!");
+    }, 300);
+  }
+});
+$(document).on("click",".editBtn",function(){
+  editIndex = $(this).data("index");
+  let allData = getData();
+  let record = allData[editIndex];
+  formData.forEach(field => {
+    if(field.id === "confirmPassword") return; 
+    if(field.inputType === "checkbox"){
+      $(`#${field.id}`).prop("checked", record[field.id]);
+    } 
+    else{
+      $(`#${field.id}`).val(record[field.id]);
+    }
+  });
+});
+$(document).ready(function(){
+  Form();
+  Table();
+  $("#submitBtn").on("click",function(e){
+    e.preventDefault();
+    try{
+      const data=getFData();
+      saveData(data);
+      $("#RForm").trigger("reset");
+    }
+    catch(err){
+      console.error(err);
+      alert("Please fix validation errors before submitting.");
+    }
+  });
+});
+</script>
+</body>
+</html>
