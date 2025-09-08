@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login with Cookie Expiry</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+  <!-- Login Page -->
+  <div id="loginPage" class="w-96 bg-white p-6 rounded-2xl shadow-lg">
+    <h2 class="text-2xl font-bold mb-4">Login</h2>
+    <input type="text" id="username" placeholder="Enter Username"
+      class="w-full border p-2 mb-3 rounded-md">
+    <input type="password" id="password" placeholder="Enter Password"
+      class="w-full border p-2 mb-3 rounded-md">
+    <button id="loginBtn" 
+      class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+      Login
+    </button>
+  </div>
+
+  <!-- Dashboard Page -->
+  <div id="dashboardPage" class="hidden w-96 bg-white p-6 rounded-2xl shadow-lg text-center">
+    <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+    <p id="welcomeMsg" class="text-lg mb-4"></p>
+    <button id="logoutBtn" 
+      class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700">
+      Logout
+    </button>
+  </div>
+
+<script>
+// ✅ Helper functions for cookies
+function setCookie(name, value, seconds) {
+  let expires = "";
+  if (seconds) {
+    let date = new Date();
+    date.setTime(date.getTime() + (seconds * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + value + expires + "; path=/";
+}
+
+function getCookie(name) {
+  let nameEQ = name + "=";
+  let ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i].trim();
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+  }
+  return null;
+}
+
+function eraseCookie(name) {
+  document.cookie = name + "=; Max-Age=-99999999;";
+}
+
+// ✅ Show dashboard if user cookie exists
+function checkLogin() {
+  let user = getCookie("username");
+  if (user) {
+    $("#loginPage").hide();
+    $("#dashboardPage").show();
+    $("#welcomeMsg").text("Welcome, " + user + " 🎉");
+    console.log("User details from cookie:", document.cookie);
+  } else {
+    $("#loginPage").show();
+    $("#dashboardPage").hide();
+  }
+}
+
+// ✅ On login button click
+$("#loginBtn").click(function () {
+  let username = $("#username").val().trim();
+  let password = $("#password").val().trim();
+
+  if (username && password) {
+    // fake login validation using AJAX (dummy)
+    $.ajax({
+      url: "https://jsonplaceholder.typicode.com/posts", // dummy API
+      type: "POST",
+      data: JSON.stringify({ username, password }),
+      contentType: "application/json",
+      success: function () {
+        setCookie("username", username, 30); // expires in 30 seconds
+        checkLogin();
+      }
+    });
+  } else {
+    alert("Please enter username and password");
+  }
+});
+
+// ✅ Logout button
+$("#logoutBtn").click(function () {
+  eraseCookie("username");
+  checkLogin();
+});
+
+// ✅ Check login status on load
+checkLogin();
+
+// ✅ Auto redirect to login after cookie expiry
+setInterval(function () {
+  if (!getCookie("username")) {
+    checkLogin();
+  }
+}, 2000);
+
+</script>
+</body>
+</html>
