@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Welcome System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-400 to-purple-600 min-h-screen flex items-center justify-center">
+    
+    <!-- Login Form -->
+    <div id="loginForm" class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome</h1>
+            <p class="text-gray-600">Enter your details to continue</p>
+        </div>
+        
+        <form id="userForm" class="space-y-6">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <input type="text" id="username" name="username" required
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                       placeholder="Enter your username">
+            </div>
+            
+            <div>
+                <label for="usercode" class="block text-sm font-medium text-gray-700 mb-2">Access Code</label>
+                <input type="text" id="usercode" name="usercode" required
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+                       placeholder="Enter your access code">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 shadow-lg">
+                Continue
+            </button>
+        </form>
+        
+        <div id="errorMessage" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg hidden">
+            Please fill in all fields
+        </div>
+    </div>
+
+    <!-- Welcome Page -->
+    <div id="welcomePage" class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md hidden">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome!</h1>
+            <p id="welcomeMessage" class="text-gray-600 text-lg"></p>
+        </div>
+        
+        <div class="bg-blue-50 rounded-lg p-4 mb-6">
+            <h3 class="font-semibold text-blue-800 mb-2">Session Info</h3>
+            <p class="text-blue-600 text-sm">Your session will expire in 5 minutes</p>
+            <p class="text-blue-600 text-sm">Refreshing the page will log you out</p>
+        </div>
+        
+        <div class="space-y-3">
+            <button id="profileBtn" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                View Profile
+            </button>
+            
+            <button id="logoutBtn" 
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200">
+                Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">User Profile</h2>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Username:</span>
+                    <span id="profileUsername" class="font-semibold"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Login Time:</span>
+                    <span id="loginTime" class="font-semibold"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Status:</span>
+                    <span class="text-green-600 font-semibold">Active</span>
+                </div>
+            </div>
+            <button id="closeProfile" 
+                    class="w-full mt-6 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let sessionTimer;
+            
+            // Check if user is already logged in (but clear on refresh)
+            checkSession();
+            
+            // Form submission
+            $('#userForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const username = $('#username').val().trim();
+                const usercode = $('#usercode').val().trim();
+                
+                if (!username || !usercode) {
+                    showError('Please fill in all fields');
+                    return;
+                }
+                
+                // Simulate AJAX login process
+                showLoading();
+                
+                setTimeout(function() {
+                    loginUser(username);
+                }, 1000);
+            });
+            
+            function showLoading() {
+                const submitBtn = $('button[type="submit"]');
+                submitBtn.html('<div class="flex items-center justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div><span class="ml-2">Processing...</span></div>');
+                submitBtn.prop('disabled', true);
+            }
+            
+            function loginUser(username) {
+                // Set cookie with 5-minute expiry
+                const expiryTime = new Date();
+                expiryTime.setMinutes(expiryTime.getMinutes() + 5);
+                
+                const userData = {
+                    username: username,
+                    loginTime: new Date().toLocaleTimeString(),
+                    expiry: expiryTime.getTime()
+                };
+                
+                document.cookie = `userSession=${JSON.stringify(userData)}; expires=${expiryTime.toUTCString()}; path=/`;
+                
+                // Show welcome page
+                showWelcomePage(username);
+                
+                // Start session timer
+                startSessionTimer();
+            }
+            
+            function showWelcomePage(username) {
+                $('#loginForm').fadeOut(300, function() {
+                    $('#welcomeMessage').text(`Hello, ${username}! You're successfully logged in.`);
+                    $('#profileUsername').text(username);
+                    
+                    const userData = getUserData();
+                    if (userData) {
+                        $('#loginTime').text(userData.loginTime);
+                    }
+                    
+                    $('#welcomePage').fadeIn(300);
+                });
+            }
+            
+            function startSessionTimer() {
+                sessionTimer = setTimeout(function() {
+                    alert('Session expired! You will be logged out.');
+                    logout();
+                }, 5 * 60 * 1000); // 5 minutes
+            }
+            
+            function checkSession() {
+                // Always clear session on page load/refresh
+                document.cookie = 'userSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                showLoginForm();
+            }
+            
+            function getUserData() {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'userSession') {
+                        try {
+                            return JSON.parse(decodeURIComponent(value));
+                        } catch (e) {
+                            return null;
+                        }
+                    }
+                }
+                return null;
+            }
+            
+            function showLoginForm() {
+                $('#welcomePage').hide();
+                $('#loginForm').show();
+                $('#username').val('');
+                $('#usercode').val('');
+                $('button[type="submit"]').html('Continue').prop('disabled', false);
+                $('#errorMessage').hide();
+            }
+            
+            function showError(message) {
+                $('#errorMessage').text(message).removeClass('hidden').hide().fadeIn(300);
+                $('button[type="submit"]').html('Continue').prop('disabled', false);
+            }
+            
+            function logout() {
+                // Clear cookie
+                document.cookie = 'userSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                
+                // Clear timer
+                if (sessionTimer) {
+                    clearTimeout(sessionTimer);
+                }
+                
+                // Show login form
+                $('#welcomePage').fadeOut(300, function() {
+                    showLoginForm();
+                    $('#loginForm').fadeIn(300);
+                });
+            }
+            
+            // Event handlers
+            $('#logoutBtn').on('click', logout);
+            
+            $('#profileBtn').on('click', function() {
+                $('#profileModal').removeClass('hidden').hide().fadeIn(300);
+            });
+            
+            $('#closeProfile').on('click', function() {
+                $('#profileModal').fadeOut(300, function() {
+                    $(this).addClass('hidden');
+                });
+            });
+            
+            // Close modal on background click
+            $('#profileModal').on('click', function(e) {
+                if (e.target === this) {
+                    $(this).fadeOut(300, function() {
+                        $(this).addClass('hidden');
+                    });
+                }
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97b7c7fc658e9a5e',t:'MTc1NzI2NDYyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
