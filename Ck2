@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Login System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <!-- Login Form -->
+  <div id="loginForm" class="bg-white rounded-lg shadow-md p-6 w-full max-w-sm">
+    <h1 class="text-xl font-bold text-center mb-4">Login</h1>
+    <form id="userForm" class="space-y-4">
+      <div>
+        <label for="username" class="block text-sm text-gray-700">Username</label>
+        <input type="text" id="username" class="w-full border rounded px-3 py-2 focus:ring focus:ring-blue-400" required>
+      </div>
+      <div>
+        <label for="usercode" class="block text-sm text-gray-700">Password</label>
+        <input type="password" id="usercode" class="w-full border rounded px-3 py-2 focus:ring focus:ring-blue-400" required>
+      </div>
+      <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+        Login
+      </button>
+    </form>
+    <p id="errorMessage" class="mt-3 text-red-600 text-sm hidden">Please enter username and password.</p>
+  </div>
+
+  <!-- Welcome Page -->
+  <div id="welcomePage" class="hidden bg-white rounded-lg shadow-md p-6 w-full max-w-sm text-center">
+    <h1 class="text-xl font-bold mb-2">Welcome, <span id="welcomeUser"></span> 🎉</h1>
+    <p class="text-gray-600 text-sm mb-4">Session expires in 5 minutes.</p>
+    <button id="logoutBtn" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">
+      Logout
+    </button>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      let sessionTimer;
+
+      // On page load → check cookie
+      let savedUser = getCookie("userSession");
+      if (savedUser) {
+        let parsed = JSON.parse(savedUser);
+        if (Date.now() < parsed.expiry) {
+          showWelcome(parsed.username);
+          startTimer(parsed.expiry - Date.now());
+        } else {
+          clearCookie("userSession");
+        }
+      }
+
+      // Login form submit
+      $("#userForm").on("submit", function(e) {
+        e.preventDefault();
+        let username = $("#username").val().trim();
+        let password = $("#usercode").val().trim();
+
+        if (!username || !password) {
+          $("#errorMessage").removeClass("hidden");
+          return;
+        }
+
+        // Set expiry 5 minutes from now
+        let expiry = new Date();
+        expiry.setMinutes(expiry.getMinutes() + 5);
+
+        let userData = {
+          username: username,
+          loginTime: new Date().toLocaleTimeString(),
+          expiry: expiry.getTime()
+        };
+
+        // ✅ Force cookie with domain/path
+        document.cookie = `userSession=${JSON.stringify(userData)}; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
+
+        showWelcome(username);
+        startTimer(5 * 60 * 1000); // 5 minutes
+      });
+
+      // Logout button
+      $("#logoutBtn").on("click", function() {
+        logout();
+      });
+
+      // Show welcome page
+      function showWelcome(user) {
+        $("#loginForm").hide();
+        $("#welcomeUser").text(user);
+        $("#welcomePage").show();
+      }
+
+      // Timer for session expiry
+      function startTimer(duration) {
+        sessionTimer = setTimeout(function() {
+          alert("Session expired!");
+          logout();
+        }, duration);
+      }
+
+      // Logout function
+      function logout() {
+        clearCookie("userSession");
+        if (sessionTimer) clearTimeout(sessionTimer);
+        $("#welcomePage").hide();
+        $("#userForm")[0].reset();
+        $("#loginForm").show();
+      }
+
+      // Cookie helpers
+      function clearCookie(name) {
+        document.cookie = name + `=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+      }
+
+      function getCookie(name) {
+        let decoded = decodeURIComponent(document.cookie);
+        let parts = decoded.split(";");
+        for (let part of parts) {
+          let c = part.trim();
+          if (c.indexOf(name + "=") === 0) {
+            return c.substring(name.length + 1);
+          }
+        }
+        return null;
+      }
+    });
+  </script>
+
+</body>
+</html>
