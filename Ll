@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>JS Memory Concepts Demo</title>
+</head>
+<body>
+  <h3>Open console to see the output directly</h3>
+
+  <script>
+    window._leaks = window._leaks || [];
+
+    function demo() {
+      console.clear();
+      console.log("=== Demo start ===");
+
+      // 1) STATIC
+      class Counter {
+        static totalInstances = 0;
+        constructor() {
+          Counter.totalInstances++;
+        }
+      }
+      new Counter(); new Counter();
+      console.log("1) static => Counter.totalInstances =", Counter.totalInstances);
+
+      // 2) HEAP allocation
+      const heapArray = new Array(100_000).fill({val: "heap-object"});
+      console.log("2) heap => allocated heapArray length =", heapArray.length);
+
+      // 3) CLOSURE
+      function makeCounter(name) {
+        let count = 0;
+        return function() {
+          count++;
+          return `${name} count is ${count}`;
+        };
+      }
+      const bobCounter = makeCounter("Bob");
+      console.log("3) closure =>", bobCounter());
+      console.log("3) closure =>", bobCounter());
+
+      // 4) MEMORY LEAK (append in loop without cleanup)
+      console.log("4) memory leak => appending 500 divs into DOM and storing references");
+      for (let i = 0; i < 500; i++) {
+        let div = document.createElement("div");
+        div.textContent = "Leaky div #" + i;
+        document.body.appendChild(div);
+
+        // store reference globally (leak)
+        window._leaks.push(div);
+      }
+      console.log("Leaked div references stored in window._leaks length =", window._leaks.length);
+
+      // 5) MEMORY HANDLING / CLEANUP
+      console.log("5) memory handling => cleaning up leaked divs");
+      window._leaks.forEach(el => {
+        if (el && el.parentNode) {
+          el.parentNode.removeChild(el); // remove from DOM
+        }
+      });
+      window._leaks = []; // drop references so GC can reclaim
+      console.log("Cleanup done. window._leaks length =", window._leaks.length);
+
+      // release heapArray
+      console.log("Releasing heapArray reference to allow GC.");
+      let heapArrayRef = heapArray;
+      heapArrayRef = null;
+
+      console.log("=== Demo end ===");
+    }
+
+    // Run automatically
+    demo();
+  </script>
+</body>
+</html>
