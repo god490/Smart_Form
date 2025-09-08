@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>JS Memory Concepts Demo</title>
+</head>
+<body>
+  <h3>Open console to see the output directly</h3>
+
+  <script>
+    // global place to intentionally hold leaked references (simulates a leak)
+    window._leaks = window._leaks || [];
+
+    // Single function that demonstrates all five things
+    function demo() {
+      console.clear();
+      console.log("=== Demo start ===");
+
+      // 1) STATIC (class static property)
+      class Counter {
+        static totalInstances = 0;            // static property (shared)
+        constructor() {
+          Counter.totalInstances++;
+        }
+      }
+      new Counter(); new Counter();
+      console.log("1) static => Counter.totalInstances =", Counter.totalInstances);
+
+      // 2) HEAP allocation
+      const heapArray = new Array(200_000).fill({val: "some-large-object"}); 
+      console.log("2) heap => created heapArray with length", heapArray.length);
+
+      // 3) CLOSURE
+      const makeGreeter = (name) => {
+        let calls = 0;
+        return function greet() {
+          calls++;
+          return `${name} called ${calls} times`;
+        };
+      };
+      const greetAlice = makeGreeter("Alice");
+      console.log("3) closure =>", greetAlice());
+      console.log("3) closure =>", greetAlice());
+
+      // 4) MEMORY LEAK
+      const detached = document.createElement("div");
+      detached.textContent = "I will be detached (leaky)";
+      function onClick() { console.log("detached clicked"); }
+      detached.addEventListener("click", onClick);
+
+      document.body.appendChild(detached);
+      document.body.removeChild(detached);
+
+      window._leaks.push({node: detached, listener: onClick});
+      console.log("4) memory leak => created detached node and kept reference in window._leaks (length):", window._leaks.length);
+
+      // 5) MEMORY HANDLING / CLEANUP
+      const leaked = window._leaks.pop();
+      if (leaked) {
+        leaked.node.removeEventListener("click", leaked.listener);
+        leaked.node = null;
+        leaked.listener = null;
+        console.log("5) memory handling => removed listener and nulled references; window._leaks length now", window._leaks.length);
+      }
+
+      console.log("Releasing heapArray reference to allow GC.");
+      let heapArrayRef = heapArray;
+      heapArrayRef = null;
+
+      console.log("=== Demo end ===");
+    }
+
+    // Run automatically
+    demo();
+  </script>
+</body>
+</html>
