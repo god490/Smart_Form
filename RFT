@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Efficient Registration Form</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6">
+  <form id="RForm" class="space-y-4"></form>
+  <button id="submitBtn" class="bg-blue-500 text-white px-4 py-2 rounded">Submit</button>
+
+  <h2 class="text-xl font-bold mt-6">Registered Users</h2>
+  <table id="FTable" class="display w-full"></table>
+
+<script>
+/* ------------------ FORM CONFIG ------------------ */
+const formData = [
+  {title:"First Name",id:"fname",type:"text",mandatory:true,regex:/^[A-Za-z]{3,}$/},
+  {title:"Last Name",id:"lname",type:"text",mandatory:true,regex:/^[A-Za-z]{1,}$/},
+  {title:"Email",id:"email",type:"email",mandatory:true,regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/},
+  {title:"Phone",id:"phone",type:"text",mandatory:true,regex:/^[0-9]{10}$/},
+  {title:"Gender",id:"gender",type:"radio",mandatory:true,
+    options:[{text:"Male",value:"male"},{text:"Female",value:"female"},{text:"Other",value:"other"}]},
+  {title:"Skills",id:"skills",type:"checkbox",mandatory:true,
+    options:[{text:"Java",value:"java"},{text:"Python",value:"python"},{text:"React",value:"react"}]},
+  {title:"Hobbies",id:"hobbies",type:"multiselect",mandatory:false,
+    options:[{text:"Reading",value:"reading"},{text:"Sports",value:"sports"},{text:"Music",value:"music"}]},
+  {title:"DOB",id:"dob",type:"date",mandatory:true},
+  {title:"Address",id:"address",type:"textarea",mandatory:true},  // ✅ textarea added
+  {title:"Password",id:"password",type:"password",mandatory:true,regex:/^(?=.*[A-Z])(?=.*[!@#$%^&*]).{6,}$/},
+  {title:"Confirm Password",id:"confirmPassword",type:"password",mandatory:true}
+];
+
+let editIndex = null;
+
+/* ------------------ REUSABLE HELPERS ------------------ */
+const storageKey = "registrationEfficient";
+
+const Storage = {
+  get: () => JSON.parse(localStorage.getItem(storageKey)) || [],
+  set: (data) => localStorage.setItem(storageKey, JSON.stringify(data))
+};
+
+function createInput(field){
+  switch(field.type){
+    case "text":
+    case "email":
+    case "password":
+      return `<input type="${field.type}" id="${field.id}" class="w-full border p-2 rounded">`;
+    case "textarea":
+      return `<textarea id="${field.id}" class="w-full border p-2 rounded" rows="3"></textarea>`;
+    case "radio":
+      return field.options.map(opt=>
+        `<label class="mr-4"><input type="radio" name="${field.id}" value="${opt.value}"> ${opt.text}</label>`
+      ).join('');
+    case "checkbox":
+      return field.options.map(opt=>
+        `<label class="mr-4"><input type="checkbox" name="${field.id}" value="${opt.value}"> ${opt.text}</label>`
+      ).join('');
+    case "multiselect":
+      return `<select id="${field.id}" class="w-full border p-2 rounded" multiple>
+        ${field.options.map(opt=>`<option value="${opt.value}">${opt.text}</option>`).join('')}
+      </select>`;
+    case "date":
+      return `<input type="text" id="${field.id}" class="datepicker w-full border p-2 rounded">`;
+  }
+}
+
+function renderForm(){
+  const form = $("#RForm");
+  form.empty();
+  formData.forEach(f=>{
+    form.append(`
+      <div>
+        <label class="block font-medium mb-1">${f.title}</label>
+        ${createInput(f)}
+        <p id="${f.id}Error" class="text-red-500 text-sm hidden"></p>
+      </div>
+    `);
+  });
+  $(".datepicker").flatpickr(); // apply datepicker
+}
+
+function validateField(field, value){
+  let msg = "";
+  if(field.id==="confirmPassword"){
+    if(value !== $("#password").val()) msg="Passwords do not match.";
+  } else if(field.mandatory){
+    if(!value || (Array.isArray(value)&&value.length===0)) msg=`${field.title} is required.`;
+  }
+  if(!msg && field.regex && value && !field.regex.test(value)){
+    msg=`Invalid ${field.title}.`;
+  }
+  if(msg){
+    $(`#${field.id}Error`).text(msg).removeClass("hidden");
+    return false;
+  }
+  $(`#${field.id}Error`).addClass("hidden");
+  return true;
+}
+
+function collectFormData(){
+  const data={};
+  let valid=true;
+  formData.forEach(f=>{
+    let value;
+    if(f.type==="checkbox"){
+      value=$(`input[name=${f.id}]:checked`).map((_,el)=>el.value).get();
+    } else if(f.type==="radio"){
+      value=$(`input[name=${f.id}]:checked`).val()||"";
+    } else{
+      value=$(`#${f.id}`).val();
+    }
+    if(!validateField(f,value)) valid=false;
+    if(f.id!=="confirmPassword") data[f.id]=value;
+  });
+  if(!valid) throw new Error("Validation failed");
+  return data;
+}
+
+/* ------------------ SAVE/UPDATE ------------------ */
+function saveData(record){
+  const all=Storage.get();
+  if(editIndex!==null){
+    all[editIndex]=record;
+    editIndex=null;
+    alert("Record updated!");
+  } else{
+    all.push(record);
+    alert("Registered successfully!");
+  }
+  Storage.set(all);
+  renderTable();
+  $("#RForm").trigger("reset");
+}
+
+/* ------------------ TABLE ------------------ */
+function renderTable(){
+  const all=Storage.get();
+  if($.fn.DataTable.isDataTable('#FTable')){
+    $('#FTable').DataTable().clear().rows.add(all).draw();
+  } else{
+    $('#FTable').DataTable({
+      data:all,
+      columns:[
+        ...formData.filter(f=>f.id!=="confirmPassword"&&f.id!=="password").map(f=>({title:f.title,data:f.id})),
+        {title:"Actions",data:null,render:(d,t,r,m)=>`
+          <button class="editBtn bg-yellow-500 text-white px-2 py-1 rounded" data-index="${m.row}">Edit</button>
+          <button class="deleteBtn bg-red-500 text-white px-2 py-1 rounded" data-index="${m.row}">Delete</button>
+        `}
+      ]
+    });
+  }
+}
+
+/* ------------------ EVENTS ------------------ */
+$(document).on("click",".deleteBtn",function(){
+  const i=$(this).data("index");
+  if(confirm("Delete this record?")){
+    const all=Storage.get();
+    all.splice(i,1);
+    Storage.set(all);
+    renderTable();
+  }
+});
+
+$(document).on("click",".editBtn",function(){
+  editIndex=$(this).data("index");
+  const record=Storage.get()[editIndex];
+  formData.forEach(f=>{
+    if(f.type==="checkbox"){
+      $(`input[name=${f.id}]`).prop("checked",false);
+      record[f.id].forEach(v=>$(`input[name=${f.id}][value=${v}]`).prop("checked",true));
+    } else if(f.type==="radio"){
+      $(`input[name=${f.id}][value=${record[f.id]}]`).prop("checked",true);
+    } else{
+      $(`#${f.id}`).val(record[f.id]);
+    }
+  });
+});
+
+$(document).ready(function(){
+  renderForm();
+  renderTable();
+  $("#submitBtn").on("click",function(e){
+    e.preventDefault();
+    try{ saveData(collectFormData()); }
+    catch(err){ alert("Please fix errors."); }
+  });
+});
+</script>
+</body>
+</html>
